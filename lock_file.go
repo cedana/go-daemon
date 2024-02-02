@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"syscall"
 )
 
 var (
@@ -44,6 +45,16 @@ func OpenLockFile(name string, perm os.FileMode) (lock *LockFile, err error) {
 	if file, err = os.OpenFile(name, os.O_RDWR|os.O_CREATE, perm); err == nil {
 		lock = &LockFile{file}
 	}
+
+	// set CLOEXEC on file
+	fd := file.Fd()
+	// Use syscall to set FD_CLOEXEC on the file descriptor
+	_, _, errno := syscall.Syscall(syscall.SYS_FCNTL, fd, syscall.F_SETFD, syscall.FD_CLOEXEC)
+	if errno != 0 {
+		fmt.Println("Error setting FD_CLOEXEC:", errno)
+		return
+	}
+
 	return
 }
 
